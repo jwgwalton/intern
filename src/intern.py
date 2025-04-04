@@ -3,7 +3,7 @@ from typing_extensions import TypedDict
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-from src.llms import chat_gpt_with_duck_duck_go_tool, duck_duck_go_tool
+from src.llms import llm_with_duck_duck_go_tool, duck_duck_go_tool
 from src.tools import BasicToolNode
 
 
@@ -18,7 +18,7 @@ graph_builder = StateGraph(State)
 
 
 def chatbot(state: State):
-    llm_response = chat_gpt_with_duck_duck_go_tool.invoke(state["messages"])
+    llm_response = llm_with_duck_duck_go_tool.invoke(state["messages"])
     # Note the reducer function will append this list of messages to the existing list of messages
     return {"messages": [llm_response]}
 
@@ -53,8 +53,7 @@ graph_builder.add_conditional_edges(
     # e.g., "tools": "my_tools"
     {"tools": "duck_duck_go", END: END},
 )
-graph_builder.add_edge("tools", "chatbot")
-
+graph_builder.add_edge("duck_duck_go", "chatbot")
 
 
 intern = graph_builder.compile()
