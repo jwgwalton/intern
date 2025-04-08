@@ -3,8 +3,9 @@ from typing_extensions import TypedDict
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-from src.llms import chat_gpt_with_duck_duck_go_tool, duck_duck_go_tool
-from src.tools import BasicToolNode
+from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.checkpoint.memory import MemorySaver
+from src.llms import llm_with_duck_duck_go_tool, duck_duck_go_tool
 
 
 class State(TypedDict):
@@ -18,43 +19,28 @@ graph_builder = StateGraph(State)
 
 
 def chatbot(state: State):
-    llm_response = chat_gpt_with_duck_duck_go_tool.invoke(state["messages"])
+    llm_response = llm_with_duck_duck_go_tool.invoke(state["messages"])
     # Note the reducer function will append this list of messages to the existing list of messages
     return {"messages": [llm_response]}
 
 
-tool_node = BasicToolNode(tools=[duck_duck_go_tool])
+tool_node = ToolNode(tools=[duck_duck_go_tool])
 
 # Nodes within the graph
 graph_builder.add_node("chatbot", chatbot)
 graph_builder.add_node("duck_duck_go", tool_node)
 
 # Edges
-def route_tools(state: State):
-    # Any time the 'chatbot' node runs, either go to 'tools' if it calls a tool, or end the loop if it responds directly.
-    if isinstance(state, list):
-        ai_message = state[-1]
-    elif messages := state.get("messages", []):
-        ai_message = messages[-1]
-    else:
-        raise ValueError(f"No messages found in input state to tool_edge: {state}")
-    if hasattr(ai_message, "tool_calls") and len(ai_message.tool_calls) > 0:
-        return "tools"
-    return END
-
 graph_builder.add_edge(START, "chatbot")
 graph_builder.add_conditional_edges(
     "chatbot",
-    route_tools,
-    # The following dictionary lets you tell the graph to interpret the condition's outputs as a specific node
-    # It defaults to the identity function, but if you
-    # want to use a node named something else apart from "tools",
-    # You can update the value of the dictionary to something else
-    # e.g., "tools": "my_tools"
+    tools_condition,
     {"tools": "duck_duck_go", END: END},
 )
-graph_builder.add_edge("tools", "chatbot")
+graph_builder.add_edge("duck_duck_go", "chatbot")
 
+# In memory checkpointer
+# TODO: Convert this to a sqlite checkpointer
+memory = MemorySaver()
 
-
-intern = graph_builder.compile()
+intern = graph_builder.compile(checkpointer=memory)
