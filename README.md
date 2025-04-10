@@ -12,11 +12,14 @@ This project uses uv for dependency management, environment management, and runn
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ````
 
-
-To install the dependencies, run:
+### Understanding UV
+See https://www.saaspegasus.com/guides/uv-deep-dive/#advanced-usage for a great intro to UV.
 
 
 ## Install dependencies
+
+To install the dependencies, run:
+
 ```bash
 uv sync
 ```
