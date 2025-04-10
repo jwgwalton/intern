@@ -16,7 +16,7 @@ from src.job_finder import create_job_finder
 
 def display_graph(graph):
     tmp_dir = tempfile.gettempdir()
-    image_path = os.path.join(tmp_dir, f"intern_graph.png")
+    image_path = os.path.join(tmp_dir, "intern_graph.png")
     graph_image = graph.draw_mermaid_png()
     with open(image_path, "wb") as f:
         f.write(graph_image)
