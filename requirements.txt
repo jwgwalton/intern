@@ -1,9 +1,0 @@
-streamlit==1.44.0
-langgraph
-langchain-openai
-langchain-community
-
-duckduckgo-search
-
-# This is for loading in .env
-python-dotenv

@@ -14,47 +14,71 @@ from src.intern import intern
 from src.job_finder import create_job_finder
 
 
-def display_graph(graph):
-    tmp_dir = tempfile.gettempdir()
-    image_path = os.path.join(tmp_dir, "intern_graph.png")
-    graph_image = graph.draw_mermaid_png()
-    with open(image_path, "wb") as f:
-        f.write(graph_image)
+def display_graph(graph) -> None:
+    """
+    Displays a graph by generating a temporary image file.
+
+    Args:
+        graph: The graph object to display.
+    """
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
+        image_path = temp_file.name
+        graph_image = graph.draw_mermaid_png()
+        temp_file.write(graph_image)
+
     img = PILImage.open(image_path)
     img.show()
+    os.remove(image_path)
 
 
+def stream_graph_updates(graph, user_input: str, config: Dict[str, str]) -> None:
+    """
+    Streams updates to the graph based on user input.
 
-
-def stream_graph_updates(graph, user_input:str, config:Dict[str, str]):
+    Args:
+        graph: The graph object to stream updates to.
+        user_input (str): The input provided by the user.
+        config (Dict[str, str]): Configuration dictionary for the graph.
+    """
     events = graph.stream(
-            {"messages": {"role": "user", "content": user_input}},
-            config,
-            stream_mode="values"
+        {"messages": {"role": "user", "content": user_input}},
+        config,
+        stream_mode="values"
     )
     for event in events:
         event["messages"][-1].pretty_print()
 
-# This would be managed by the user interface in a real application
-thread_id = str(uuid.uuid4())
 
-while True:
+def main() -> None:
+    """
+    Main entry point for the application.
+    Handles tool selection and user interaction.
+    """
+    thread_id = str(uuid.uuid4())
     config = {"configurable": {"thread_id": thread_id}}
-    tool_choice = input("What tool do you wish to work with?; ['intern' 'job_hunter']: ")
-    if tool_choice.lower() == "job_hunter":
-        print("Selected job_hunter")
-        model =  ChatAnthropic(model="claude-3-5-haiku-20241022")
-        tool = create_job_finder(model)
-        display_graph(tool.get_graph())
 
-    elif tool_choice.lower() == "intern":
+    tool_choice = input("What tool do you wish to work with? ['intern', 'job_hunter']: ").lower()
+
+    if tool_choice == "job_hunter":
+        print("Selected job_hunter")
+        model = ChatAnthropic(model="claude-3-5-haiku-20241022")
+        tool = create_job_finder(model)
+    elif tool_choice == "intern":
+        print("Selected intern")
         tool = intern
-        display_graph(tool.get_graph())
     else:
-        print("Invalid choice, please try again. The options are: ['intern' 'job_hunter']")
-        continue
-    user_input = input("User: ")
-    if user_input.lower() in ["quit", "exit", "q"]:
-        print("Goodbye!")
-        break
-    stream_graph_updates(tool, user_input, config)
+        print("Invalid choice. Exiting.")
+        return
+
+    display_graph(tool.get_graph())
+
+    while True:
+        user_input = input("User: ")
+        if user_input.lower() in ["quit", "exit", "q"]:
+            print("Goodbye!")
+            break
+        stream_graph_updates(tool, user_input, config)
+
+
+if __name__ == "__main__":
+    main()
